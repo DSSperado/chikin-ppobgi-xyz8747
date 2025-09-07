@@ -1,0 +1,418 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>다혜놀이터 (치킨뽑기판)</title>
+  <style>
+    :root{
+      --bg:#0e0f12; --text:#ffffff; --sub:#ffffff;
+      --tile:#ff4fa0; --tile-muted:#fad4e7; --win:#7CFF45; --btn-green:#fcfa4f;
+      --gap:10px; --tile-size:60px; --cols:6;
+      --grid-w: calc(var(--cols) * var(--tile-size) + (var(--cols) - 1) * var(--gap));
+      --board-w: 0px;
+      --board-h: 0px;
+      --board-img: none;
+      --draw-w: 0px;
+      --draw-h: 0px;
+      --offset-x: 0px;
+      --offset-y: 0px;
+    }
+    .light{ --bg:#ffffff; --text:#181a20; --sub:#7a7d87; --tile:#ff4fa0; --tile-muted:#fde8f1; --win:#7CFF45 }
+    *{box-sizing:border-box}
+    html, body{
+      margin:0;
+      height:100%;
+      overflow:hidden;
+      background:var(--bg);
+      color:var(--text);
+      font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans KR",Arial,sans-serif;
+    }
+    body{}
+    
+    #stage{
+      width:1920px; height:1080px;
+      position:absolute; left:50%; top:50%;
+      transform:translate(-50%,-50%) scale(var(--s,1));
+      transform-origin:50% 50%;
+    }
+    .wrap{display:flex; flex-direction:column; align-items:center;}
+
+    .header{display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; width:var(--grid-w); max-width:100%;}
+    .title{font-weight:900; font-size:40px; color: #fff; text-shadow: 0 0 3px #ff00ff, 0 0 6px #ff00ff, 0 0 10px #ff33ff;}
+    .toggle{border:2px solid rgba(255,255,255,.25); background:transparent; color:var(--text); border-radius:999px; padding:10px 18px; cursor:pointer; font-size:16px; line-height:1}
+    .light .toggle{border-color:#e4e6ef}
+
+    .panel{display:flex; flex-direction:column; align-items:center;}
+
+    .controls{display:grid; grid-template-columns: repeat(3, 1fr) auto auto; gap:10px; align-items:end; margin-bottom:16px; width:var(--grid-w); max-width:100%; margin:0 auto 16px}
+    .grid{display:grid; gap:var(--gap); grid-template-columns:repeat(var(--cols), var(--tile-size)); width:var(--grid-w); max-width:100%; justify-content:center; position: relative; margin:0 auto}
+    #makeBtn{ margin-left:auto; }
+
+    .field{display:flex; flex-direction:column}
+    .field label{font-size:19px; color:var(--sub); margin:0 0 6px 6px}
+    .field input{height:54px; border-radius:14px; background:#0c0d11; border:3px solid #f9a5ce; color:#fff; padding:0 14px; font-size:18px; outline: none; box-shadow: 0 0 2px #ff00ff, 0 0 4px #fd30fd, 0 0 8px #f56df5;}
+    .field select{height:54px; border-radius:14px; background:#0c0d11; border:3px solid #f9a5ce; color:#fff; padding:0 14px; font-size:18px; outline: none; box-shadow: 0 0 2px #ff00ff, 0 0 4px #fd30fd, 0 0 8px #f56df5; -webkit-appearance: none; -moz-appearance: none; appearance: none; background-image: url("data:image/svg+xml;utf8,<svg fill='white' height='24' viewBox='0 0 24 24' width='24' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>"); background-repeat: no-repeat; background-position: right 12px center;  background-size: 16px 16px}
+    .field input[type=number]::-webkit-inner-spin-button,
+    .field input[type=number]::-webkit-outer-spin-button {-webkit-appearance: none; margin: 0}
+    .field input[type=number] {-moz-appearance: textfield}
+    .light .field input, .light .field select{background:#fff; border-color:#e7e8f2; color:#181a20}
+
+    .btn{height:54px; padding:0 22px; border:0; border-radius:14px; font-weight:800; letter-spacing:0.3px; cursor:pointer; font-size:18px}
+    .btn.green{background:var(--btn-green); color:#06140d}
+
+    .tile{width:var(--tile-size); height:var(--tile-size); border-radius:12px; display:flex; align-items:center; justify-content:center; font-weight:900; font-size:calc(var(--tile-size) * 0.42); cursor:pointer; user-select:none; position:relative; transition:transform .06s ease, box-shadow .2s ease, background .2s ease, filter .2s ease; background:var(--tile-muted); color:#202226; box-shadow:0 3px 10px rgba(0,0,0,.1)}
+    .tile[data-state="miss"].revealed::before{opacity: 1;}
+    .tile[data-state="hit"]{background:var(--win); color:#111; box-shadow:0 0 0 3px rgba(124,255,69,.24), 0 10px 22px rgba(124,255,69,.28); font-size: calc(var(--tile-size) * 0.35); overflow: visible}
+    .tile[data-state="hit"]::after{content:""; position:absolute; inset:-3px; border-radius:14px; box-shadow:0 0 16px rgba(124,255,69,.8), 0 0 36px rgba(124,255,69,.5)}
+    .tile:active{transform:translateY(1px) scale(.99)}
+    .tile{overflow: hidden; position: relative; position: relative; z-index: 0}
+    .tile::before{
+      content:"";
+      z-index: -1;
+      position:absolute; inset:0;
+      border-radius:inherit;
+      background-image: var(--board-img);
+      background-size: var(--draw-w) var(--draw-h);
+      background-position: calc(var(--bg-x) + var(--offset-x)) calc(var(--bg-y) + var(--offset-y));
+      opacity: 0;
+      transition: opacity .2s ease;
+    }
+    .tile[data-state="hit"]::before {
+      display: none;
+    }
+    .tile[data-state="miss"].revealed{
+      background: transparent;
+      box-shadow: none;
+      color: #fff;
+      text-shadow: 0 0 3px #ffffff, 0 0 6px #fd30fd, 0 0 10px #ff00ff;
+    }
+  </style>
+</head>
+<body>
+  <div id="stage">
+    <div class="wrap">
+      <div class="header">
+        <div class="title">다혜놀이터</div>
+        <button id="themeBtn" class="toggle">라이트모드</button>
+      </div>
+
+      <div class="panel">
+        <div class="controls" role="group" aria-label="게임 설정">
+          <div class="field">
+            <label for="total">뽑기 갯수</label>
+            <input id="total" type="number" min="4" max="200" value="30" />
+          </div>
+          <div class="field">
+            <label for="wins">당첨 개수</label>
+            <input id="wins" type="number" min="1" max="50" value="1" />
+          </div>
+          <div class="field">
+            <label for="voice">보이스</label>
+            <select id="voice">
+              <option value="default">기본(음성없음)</option>
+              <option value="bright">음성1</option>
+              <option value="deep">음성2</option>
+            </select>
+          </div>
+          <button id="makeBtn" class="btn blue">번호 생성</button>
+          <button id="genBtn" class="btn green">다시 뽑기</button>
+        </div>
+        <div id="grid" class="grid" aria-live="polite"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const BASE_W = 1920, BASE_H = 1080;
+    const SCALE_BIAS = 0.92;
+    const BOARD_IMG_URL = "KakaoTalk_20250906_204024418.jpg";
+    const IMAGE_CANDIDATES = [
+        BOARD_IMG_URL,
+        "KakaoTalk_20250906_204023917.jpg",
+        "KakaoTalk_20250906_204024076.jpg",
+        "KakaoTalk_20250904_011617969.jpg",
+        "KakaoTalk_20250906_204053603.jpg",
+        "KakaoTalk_20250830_182714634.jpg",
+    ];
+    
+    let imagePool = [];
+    function shuffle(arr){
+      const a=[...arr];
+      for(let i=a.length-1;i>0;i--){
+        const j=Math.floor(Math.random()*(i+1));
+        [a[i],a[j]]=[a[j],a[i]];
+      }
+      return a;
+    }
+    let lastImageUrl = null;
+    function pickNextImage(){
+      if(imagePool.length===0) imagePool = shuffle(IMAGE_CANDIDATES);
+      let url = imagePool.pop();
+      if (url === lastImageUrl && IMAGE_CANDIDATES.length > 1) {
+        if (imagePool.length===0) imagePool = shuffle(IMAGE_CANDIDATES);
+        const alt = imagePool.pop();
+        imagePool.push(url);
+        url = alt;
+      }
+      lastImageUrl = url;
+      return url;
+    }
+
+    // 랜덤 이미지로 새 게임 시작
+    async function newGame(){
+      const url = pickNextImage();          // ① 이미지 뽑기
+      setBoardImage(url);                   // ② 배경 적용
+      try {                                 // ③ 메타 로드(cover 계산용)
+        await loadImageMeta(url);
+      } catch(e) {
+        console.warn('이미지 정보를 불러오지 못했습니다:', e);
+      }
+      genWinners();                         // ④ 번호/타일 생성
+    }
+    
+    function setBoardImage(url){
+      document.documentElement.style.setProperty('--board-img', `url('${url}')`);
+    }
+    const imgMeta = { w: 0, h: 0, loaded: false };
+    function loadImageMeta(url){
+        return new Promise((resolve, reject)=>{
+        const img = new Image();
+        img.onload = ()=>{ imgMeta.w = img.naturalWidth; imgMeta.h = img.naturalHeight; imgMeta.loaded = true; resolve(); };
+        img.onerror = reject;
+        img.src = url;
+        });
+    }
+    const AudioKit = (()=>{ let ctx; const start=()=>{ctx||(ctx=new (window.AudioContext||window.webkitAudioContext)()); return ctx};
+      const env=(g,t=0.01,s=0.09)=>{const now=ctx.currentTime; g.gain.cancelScheduledValues(now); g.gain.setValueAtTime(0,now); g.gain.linearRampToValueAtTime(0.9,now+t); g.gain.exponentialRampToValueAtTime(0.0001, now+t+s)};
+      const beep=(f=660,type='triangle',dur=0.12)=>{start(); const o=ctx.createOscillator(), g=ctx.createGain(); o.type=type; o.frequency.value=f; o.connect(g); g.connect(ctx.destination); env(g,0.01,dur); o.start(); o.stop(ctx.currentTime+dur+0.03)};
+      const chord=(fs)=>{start(); fs.forEach((f,i)=>setTimeout(()=>beep(f,'sine',0.16), i*40));}; return {beep,chord}; })();
+
+    const gridEl=document.getElementById('grid'), totalEl=document.getElementById('total'), winsEl=document.getElementById('wins'), themeBtn=document.getElementById('themeBtn'), voiceEl=document.getElementById('voice');
+    let lastTotal = null, lastWinCount = null;
+    let hasPlayed = false;
+    function getCurrentSpec(){
+      const nowTotal = parseInt(totalEl.value || '0', 10);
+      const nowWins  = parseInt(winsEl.value  || '0', 10);
+      return { nowTotal, nowWins };
+    }
+    function isSameSpec(){
+      if (lastTotal==null || lastWinCount==null) return false;
+      const {nowTotal, nowWins} = getCurrentSpec();
+      return nowTotal===lastTotal && nowWins===lastWinCount;
+    }
+    let winners=new Set(); let total=28; let winCount=1; let picked=new Set();
+    let voiceProfile = localStorage.getItem('pickgame-voice') || 'default';
+
+    // ★ 숫자 클릭 시 내보낼 멘트(프로필별/당첨·꽝)
+    const VOICE_PRESETS = {
+      default: null, // 기본은 멘트 없음
+      bright: { win: '꺼져',     miss: '야' },
+      deep:   { win: '꺼져',   miss: '뻐' }
+    };
+
+    function pickKRVoice(){
+      const vs = speechSynthesis.getVoices();
+      return vs.find(v => /ko/i.test(v.lang)) || vs[0] || null;
+    }
+
+    function speakOutcome(outcome){ // 'win' | 'miss'
+      const p = VOICE_PRESETS[voiceProfile];
+      if (!p || !p[outcome]) return;
+      const u = new SpeechSynthesisUtterance(p[outcome]);
+      const v = pickKRVoice();
+      if (v) u.voice = v;
+      u.lang  = v?.lang || 'ko-KR';
+
+      u.pitch = (voiceProfile==='bright'?1.20:voiceProfile==='deep'?0.95:1);
+      u.rate  = (voiceProfile==='bright'?1.75:1.50);
+      u.volume= 1;
+      speechSynthesis.cancel();     // 이전 말 끊기
+      speechSynthesis.speak(u);
+    }
+
+    // (보이스 목록이 늦게 뜨는 브라우저 대비)
+    if (speechSynthesis.getVoices().length === 0) {
+      speechSynthesis.addEventListener('voiceschanged', ()=>{}, { once:true });
+    }
+
+    const SFX = {
+      default: { miss:{f:420,type:'triangle'}, hit:[988,1319,1760] },
+      bright:  { miss:{f:420,type:'triangle'}, hit:[988,1319,1760] },
+      deep:    { miss:{f:420,type:'triangle'}, hit:[988,1319,1760] }
+    };
+    const clamp=(v,min,max)=>Math.min(max,Math.max(min,v));
+    const randInt=(n)=>Math.floor(Math.random()*n);
+
+    function syncButtons(){
+      const makeBtn = document.getElementById('makeBtn');
+      const genBtn  = document.getElementById('genBtn');
+      
+      makeBtn.disabled = isSameSpec();
+      genBtn.disabled  = !(hasPlayed && isSameSpec());
+    }
+
+    function layout(){
+      const cols = 6;
+      let gap = 10;
+
+      const header = document.querySelector('.header');
+      const controls = document.querySelector('.controls');
+
+      const bs = getComputedStyle(document.body);
+
+      const rows = Math.ceil(total / cols);
+      if (rows >= 10) gap = 6;
+
+      document.documentElement.style.setProperty('--gap', gap + 'px');
+      document.documentElement.style.setProperty('--cols', cols);
+
+      const maxPanelW  = Math.floor(BASE_W * 0.96);
+      const availableH = BASE_H - header.offsetHeight - controls.offsetHeight - 24;
+
+      const maxByWidth  = Math.floor((maxPanelW - (cols - 1) * gap) / cols);
+      const maxByHeight = Math.floor((availableH - (rows - 1) * gap) / rows);
+      const size = Math.max(32, Math.min(maxByWidth, maxByHeight));
+
+      document.documentElement.style.setProperty('--tile-size', size + 'px');
+
+      // ★ 그리드/보드의 실제 px 크기 계산
+      const gridW = cols * size + (cols - 1) * gap;
+      const gridH = rows * size + (rows - 1) * gap;
+
+      document.documentElement.style.setProperty('--grid-w',  gridW + 'px');
+      document.documentElement.style.setProperty('--board-w', gridW + 'px');
+      document.documentElement.style.setProperty('--board-h', gridH + 'px');
+
+      if (imgMeta.loaded) {
+        const rImg = imgMeta.w / imgMeta.h;
+        const rBoard = gridW / gridH;
+
+        let drawW, drawH;
+        if (rImg > rBoard) {
+            // 이미지가 더 가로로 긴 경우: 높이에 맞춰 폭을 늘림
+            drawH = gridH;
+            drawW = Math.round(gridH * rImg);
+        } else {
+            // 이미지가 더 세로로 긴 경우: 폭에 맞춰 높이를 늘림
+            drawW = gridW;
+            drawH = Math.round(gridW / rImg);
+        }
+        const offsetX = Math.round((drawW - gridW) / -2); // 중앙 정렬(좌우 잘림 균등)
+        const offsetY = Math.round((drawH - gridH) / -2); // 중앙 정렬(상하 잘림 균등)
+
+        document.documentElement.style.setProperty('--draw-w',  drawW + 'px');
+        document.documentElement.style.setProperty('--draw-h',  drawH + 'px');
+        document.documentElement.style.setProperty('--offset-x', offsetX + 'px');
+        document.documentElement.style.setProperty('--offset-y', offsetY + 'px');
+      }  
+    
+      // ★ 각 타일의 배경 위치(이미지 조각 좌표) 설정
+      const tiles = gridEl.querySelectorAll('.tile');
+      tiles.forEach((t,i)=>{
+        const r = Math.floor(i / cols);
+        const c = i % cols;
+        const x = -(c * (size + gap));
+        const y = -(r * (size + gap));
+        t.style.setProperty('--bg-x', x + 'px');
+        t.style.setProperty('--bg-y', y + 'px');
+      });
+    }
+
+    function genWinners(){
+      total   = clamp(parseInt(totalEl.value||'28',10), 4, 200);
+      winCount= clamp(parseInt(winsEl.value||'1',10), 1, Math.min(50, total));
+      totalEl.value = total; winsEl.value = winCount;
+
+      winners = new Set(); picked = new Set();
+      while (winners.size < winCount) winners.add(1 + randInt(total));
+
+      renderGrid(total);
+      layout();
+      AudioKit.chord([392,494,659]);
+
+      lastTotal = total;
+      lastWinCount = winCount;
+      hasPlayed = true;
+      syncButtons();
+    }
+
+    function renderGrid(n){
+      gridEl.innerHTML='';
+      for(let i=1;i<=n;i++){
+        const b=document.createElement('button');
+        b.className='tile';
+        b.textContent=i;
+        b.dataset.num=i;
+        b.dataset.state='ready';
+        b.addEventListener('click', onPick);
+        gridEl.appendChild(b);
+      }
+    }
+
+    function onPick(e){
+      const el=e.currentTarget;
+      const num=+el.dataset.num;
+      if(picked.has(num)) return;
+      picked.add(num);
+      
+      const isWin=winners.has(num);
+      el.dataset.state=isWin?'hit':'miss';
+      
+      if(isWin){
+        el.textContent = "당첨";
+        AudioKit.chord(SFX[voiceProfile].hit);
+        speakOutcome('win');
+      } else {
+        el.classList.add('revealed');            // ★ 꽝만 이미지 100% 공개
+        const m = SFX[voiceProfile].miss;
+        AudioKit.beep(m.f, m.type, 0.1);
+        speakOutcome('miss');
+      }
+    }
+
+    document.getElementById('makeBtn').addEventListener('click', async ()=>{
+      if (isSameSpec()) return;      // 바꾸지 않았으면 무시
+      await newGame();               // 새 이미지 + 새 판 (내부에서 genWinners() 호출)
+    });
+    document.getElementById('genBtn').addEventListener('click', async ()=>{
+      if (!(hasPlayed && isSameSpec())) return;
+      await newGame();
+    });
+    window.addEventListener('resize', fit);
+    if (window.visualViewport) {
+      visualViewport.addEventListener('resize', fit);
+      visualViewport.addEventListener('scroll', fit);
+    }
+
+    function setTheme(mode){ if(mode==='light'){ document.body.classList.add('light'); themeBtn.textContent='다크모드'; } else { document.body.classList.remove('light'); themeBtn.textContent='라이트모드'; } localStorage.setItem('pickgame-theme', document.body.classList.contains('light')?'light':'dark'); layout(); fit();}
+    themeBtn.addEventListener('click', ()=> setTheme(document.body.classList.contains('light')? 'dark':'light'));
+
+    (async function init(){setTheme(localStorage.getItem('pickgame-theme')||'dark');voiceEl.value="default";voiceProfile="default";voiceEl.addEventListener('change',()=>{voiceProfile=voiceEl.value});try{await loadImageMeta(BOARD_IMG_URL);}catch(e){console.warn('이미지 정보를 불러오지 못했습니다:',e);}await newGame();layout();fit();syncButtons();})();
+    totalEl.addEventListener('input',  syncButtons);
+    winsEl .addEventListener('input',  syncButtons);
+    // (안전용: 일부 브라우저/상황에서 change만 뜨는 경우 대비)
+    totalEl.addEventListener('change', syncButtons);
+    winsEl .addEventListener('change', syncButtons);
+    
+    // 브라우저/페이지 줌 보정 포함한 뷰포트 크기
+    function viewportSize(){
+      const vv = window.visualViewport;
+      if (vv && typeof vv.scale === 'number') {
+        return { w: Math.floor(vv.width * vv.scale),
+                h: Math.floor(vv.height * vv.scale) };
+      }
+      return { w: window.innerWidth, h: window.innerHeight };
+    }
+
+    // contain 스케일: 전체 보임(여백 가능, 잘림 없음)
+    function fit(){
+      const {w,h} = viewportSize();
+      const raw = Math.min(w / BASE_W, h / BASE_H);      // contain 기본 스케일
+      const biased = raw * SCALE_BIAS;                   // ← 살짝 더 작게
+      const s = Math.max(0.6, Math.min(biased, 2));      // (선택) 최소/최대 보호
+      document.documentElement.style.setProperty('--s', s);
+    }
+  </script>
+</body>
+</html>
