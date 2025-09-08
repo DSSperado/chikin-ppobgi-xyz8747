@@ -111,9 +111,8 @@
           <div class="field">
             <label for="voice">보이스</label>
             <select id="voice">
-              <option value="default">기본(음성없음)</option>
-              <option value="bright">음성1</option>
-              <option value="deep">음성2</option>
+              <option value="bright">우울다혜</option>
+              <option value="deep">기쁜다혜</option>
             </select>
           </div>
           <button id="makeBtn" class="btn blue">번호 생성</button>
@@ -206,33 +205,55 @@
       return nowTotal===lastTotal && nowWins===lastWinCount;
     }
     let winners=new Set(); let total=28; let winCount=1; let picked=new Set();
-    let voiceProfile = localStorage.getItem('pickgame-voice') || 'default';
+    let voiceProfile = localStorage.getItem('pickgame-voice') || 'bright';
 
-    // ★ 숫자 클릭 시 내보낼 멘트(프로필별/당첨·꽝)
-    const VOICE_PRESETS = {
-      default: null, // 기본은 멘트 없음
-      bright: { win: '꺼져',     miss: '야' },
-      deep:   { win: '꺼져',   miss: '뻐' }
+    const VOICE_AUDIO = {
+      bright: { win: 'KakaoTalk_Audio_20250908_2230_50_729.mp3', miss: 'KakaoTalk_Audio_20250909_0047_27_119.mp3' },
+      deep:   { win: 'KakaoTalk_Audio_20250908_2240_07_904.mp3',   miss: 'KakaoTalk_Audio_20250908_2231_05_653.mp3' }
     };
+
+    const voicePlayers = {};
+
+    function buildVoicePlayers(){
+      for (const prof of ['bright','deep']){
+        voicePlayers[prof] = {};
+        for (const k of ['win','miss']){
+          const src = VOICE_AUDIO[prof][k];
+          if (!src) continue;
+          const a = new Audio(src);
+          // 같은 폴더/같은 호스트면 필요 없음. CDN/다른 도메인이면 주석 해제
+          // a.crossOrigin = 'anonymous';
+          a.addEventListener('error', ()=>console.warn('오디오 로드 에러:', src));
+          voicePlayers[prof][k] = a;
+        }
+      }
+    }
+
+    const VOICE_TRIM = {
+      bright: { win: 0.25, miss: 0.20 },
+      deep:   { win: 0.20, miss: 0.25 }
+    };
+
+    function playVoice(outcome){ // 'win' | 'miss'
+      const a = voicePlayers?.[voiceProfile]?.[outcome];
+      if (!a) return;
+
+      const trim = (VOICE_TRIM[voiceProfile] && VOICE_TRIM[voiceProfile][outcome]) || 0;
+
+      a.pause();
+
+      const start = () => {
+        try { a.currentTime = trim; } catch (_) {}
+        a.play().catch(err => console.warn('오디오 재생 실패:', a.src, err));
+      };
+
+      if (a.readyState >= 1) start();                 // HAVE_METADATA
+      else { a.addEventListener('loadedmetadata', start, { once:true }); a.load(); }
+    }
 
     function pickKRVoice(){
       const vs = speechSynthesis.getVoices();
       return vs.find(v => /ko/i.test(v.lang)) || vs[0] || null;
-    }
-
-    function speakOutcome(outcome){ // 'win' | 'miss'
-      const p = VOICE_PRESETS[voiceProfile];
-      if (!p || !p[outcome]) return;
-      const u = new SpeechSynthesisUtterance(p[outcome]);
-      const v = pickKRVoice();
-      if (v) u.voice = v;
-      u.lang  = v?.lang || 'ko-KR';
-
-      u.pitch = (voiceProfile==='bright'?1.20:voiceProfile==='deep'?0.95:1);
-      u.rate  = (voiceProfile==='bright'?1.75:1.50);
-      u.volume= 1;
-      speechSynthesis.cancel();     // 이전 말 끊기
-      speechSynthesis.speak(u);
     }
 
     // (보이스 목록이 늦게 뜨는 브라우저 대비)
@@ -241,7 +262,6 @@
     }
 
     const SFX = {
-      default: { miss:{f:420,type:'triangle'}, hit:[988,1319,1760] },
       bright:  { miss:{f:420,type:'triangle'}, hit:[988,1319,1760] },
       deep:    { miss:{f:420,type:'triangle'}, hit:[988,1319,1760] }
     };
@@ -380,12 +400,12 @@
       if(isWin){
         el.textContent = "당첨";
         AudioKit.chord(SFX[voiceProfile].hit);
-        speakOutcome('win');
+        playVoice('win');
       } else {
         el.classList.add('revealed');            // ★ 꽝만 이미지 100% 공개
         const m = SFX[voiceProfile].miss;
         AudioKit.beep(m.f, m.type, 0.1);
-        speakOutcome('miss');
+        playVoice('miss');
       }
     }
 
@@ -406,7 +426,25 @@
     function setTheme(mode){ if(mode==='light'){ document.body.classList.add('light'); themeBtn.textContent='다크모드'; } else { document.body.classList.remove('light'); themeBtn.textContent='라이트모드'; } localStorage.setItem('pickgame-theme', document.body.classList.contains('light')?'light':'dark'); layout(); fit();}
     themeBtn.addEventListener('click', ()=> setTheme(document.body.classList.contains('light')? 'dark':'light'));
 
-    (async function init(){setTheme(localStorage.getItem('pickgame-theme')||'dark');voiceEl.value="default";voiceProfile="default";voiceEl.addEventListener('change',()=>{voiceProfile=voiceEl.value});try{await loadImageMeta(BOARD_IMG_URL);}catch(e){console.warn('이미지 정보를 불러오지 못했습니다:',e);}await newGame();layout();fit();syncButtons();})();
+    (async function init(){setTheme(localStorage.getItem('pickgame-theme')||'dark'); voiceEl.value="bright"; voiceProfile="bright"; buildVoicePlayers(); voiceEl.addEventListener('change',()=>{voiceProfile=voiceEl.value}); try{await loadImageMeta(BOARD_IMG_URL);}catch(e){console.warn('이미지 정보를 불러오지 못했습니다:',e);}await newGame();layout();fit();syncButtons();})();
+    
+    function primeVoices(){
+      const p = voiceProfile;
+      ['win','miss'].forEach(k=>{
+        const a = voicePlayers?.[p]?.[k];
+        if(!a) return;
+        const trim = (VOICE_TRIM[p] && VOICE_TRIM[p][k]) || 0;
+        a.muted = true;                 // 자동재생 정책 충족
+        a.play().then(()=>{
+          a.pause();
+          a.muted = false;
+          try { a.currentTime = trim; } catch(_) {}
+        }).catch(()=>{ /* 첫 클릭 전엔 실패할 수도 있으니 무시 */ });
+      });
+    }
+    // init() 안 어딘가에서 한 번만 연결
+    document.addEventListener('pointerdown', primeVoices, { once:true });
+
     totalEl.addEventListener('input',  syncButtons);
     winsEl .addEventListener('input',  syncButtons);
     // (안전용: 일부 브라우저/상황에서 change만 뜨는 경우 대비)
