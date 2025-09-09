@@ -111,8 +111,8 @@
           <div class="field">
             <label for="voice">보이스</label>
             <select id="voice">
-              <option value="bright">우울다혜</option>
-              <option value="deep">기쁜다혜</option>
+              <option value="bright">기쁜다혜</option>
+              <option value="deep">우울다혜</option>
             </select>
           </div>
           <button id="makeBtn" class="btn blue">번호 생성</button>
@@ -208,8 +208,8 @@
     let voiceProfile = localStorage.getItem('pickgame-voice') || 'bright';
 
     const VOICE_AUDIO = {
-      bright: { win: 'KakaoTalk_Audio_20250908_2230_50_729.mp3', miss: 'KakaoTalk_Audio_20250909_0047_27_119.mp3' },
-      deep:   { win: 'KakaoTalk_Audio_20250908_2240_07_904.mp3',   miss: 'KakaoTalk_Audio_20250908_2231_05_653.mp3' }
+      bright: { win: 'KakaoTalk_Audio_20250908_2240_07_904.mp3', miss: 'KakaoTalk_Audio_20250908_2231_05_653.mp3' },
+      deep:   { win: 'KakaoTalk_Audio_20250908_2230_50_729.mp3',   miss: 'KakaoTalk_Audio_20250909_0047_27_119.mp3' }
     };
 
     const voicePlayers = {};
@@ -230,8 +230,8 @@
     }
 
     const VOICE_TRIM = {
-      bright: { win: 0.25, miss: 0.20 },
-      deep:   { win: 0.20, miss: 0.25 }
+      bright: { win: 0.25, miss: 0.25 },
+      deep:   { win: 0.25, miss: 0.25 }
     };
 
     function playVoice(outcome){ // 'win' | 'miss'
