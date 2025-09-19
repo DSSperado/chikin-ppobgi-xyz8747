@@ -90,6 +90,7 @@
     .ctx-img{ position:absolute; inset:0; width:100%; height:100%; opacity:0; z-index:2; }
   </style>
 </head>
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
 <body>
   <div id="stage">
     <div class="wrap">
@@ -251,6 +252,34 @@
       else { a.addEventListener('loadedmetadata', start, { once:true }); a.load(); }
     }
 
+    function fireConfetti(){
+      const duration = 1500;               // 1.5초
+      const end = Date.now() + duration;
+
+      (function frame(){
+        // 왼쪽
+        confetti({
+          particleCount: 3,
+          angle: 60,
+          spread: 55,
+          origin: { x: 0 },
+          colors: ['#bb0000','#ffffff']
+        });
+        // 오른쪽
+        confetti({
+          particleCount: 3,
+          angle: 120,
+          spread: 55,
+          origin: { x: 1 },
+          colors: ['#bb0000','#ffffff']
+        });
+
+        if(Date.now() < end){
+          requestAnimationFrame(frame);
+        }
+      })();
+    }
+
     function pickKRVoice(){
       const vs = speechSynthesis.getVoices();
       return vs.find(v => /ko/i.test(v.lang)) || vs[0] || null;
@@ -401,6 +430,7 @@
         el.textContent = "당첨";
         AudioKit.chord(SFX[voiceProfile].hit);
         playVoice('win');
+        fireConfetti();
       } else {
         el.classList.add('revealed');            // ★ 꽝만 이미지 100% 공개
         const tn = el.firstChild; if (tn && tn.nodeType === Node.TEXT_NODE) tn.nodeValue = '꽝'; else el.textContent = '꽝';
