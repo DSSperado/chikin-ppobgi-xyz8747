@@ -47,10 +47,9 @@
 
     .controls{display:grid; grid-template-columns: repeat(3, 1fr) auto auto; gap:10px; align-items:end; margin-bottom:16px; width:var(--grid-w); max-width:100%; margin:0 auto 16px}
     .grid{display:grid; gap:var(--gap); grid-template-columns:repeat(var(--cols), var(--tile-size)); width:var(--grid-w); max-width:100%; justify-content:center; position: relative; margin:0 auto}
-    #makeBtn{ margin-left:auto; }
 
-    .field{display:flex; flex-direction:column}
-    .field label{font-size:19px; color:var(--sub); margin:0 0 6px 6px}
+    .field{display:flex; flex-direction:column;}
+    .field label{font-size:20px; color:var(--sub); margin:0 0 10px 5px; text-align: left; }
     .field input{height:54px; border-radius:14px; background:#0c0d11; border:3px solid #f9a5ce; color:#fff; padding:0 14px; font-size:18px; outline: none; box-shadow: 0 0 2px #ff00ff, 0 0 4px #fd30fd, 0 0 8px #f56df5;}
     .field select{height:54px; border-radius:14px; background:#0c0d11; border:3px solid #f9a5ce; color:#fff; padding:0 14px; font-size:18px; outline: none; box-shadow: 0 0 2px #ff00ff, 0 0 4px #fd30fd, 0 0 8px #f56df5; -webkit-appearance: none; -moz-appearance: none; appearance: none; background-image: url("data:image/svg+xml;utf8,<svg fill='white' height='24' viewBox='0 0 24 24' width='24' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>"); background-repeat: no-repeat; background-position: right 12px center;  background-size: 16px 16px}
     .field input[type=number]::-webkit-inner-spin-button,
@@ -89,16 +88,111 @@
     }
     .ctx-img{ position:absolute; inset:0; width:100%; height:100%; opacity:0; z-index:2; }
     #themeBtn {
-      font-size: 18px;
       padding: 12px 24px;
       border-width: 3px;
       border-radius: 40px;
       display: none;
     }
+    .start .controls{
+      position: fixed;            /* 중앙 고정 */
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 1000;
+      width: 1000px;
+      max-width: 92vw;
+      background: rgba(12,13,17,0.96);
+      padding: 22px 26px;
+      border-radius: 14px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.35);
+      text-align: center;
+    }
+
+    .start .controls #makeBtn{
+      grid-column: 1 / -1;   /* 입력칸 아래로 내려감 */
+      height: 60px;
+      margin: 30px auto 0;   /* 위쪽 여백 + 중앙 정렬 */
+      display: block;        /* 블록화해서 가운데 배치 */
+      width: 150px;          /* (선택) 버튼 폭 일정하게 */
+      position: relative;
+      left: -7px;   /* ⬅️ 음수값으로 왼쪽 이동, 양수면 오른쪽 이동 */
+      font-size: 1.5em;
+    }
+
+    /* 초기엔 그리드 비활성(보드 안 보임) */
+    .start #grid{
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    /* 설정 화면(start)일 때, 제목 중앙 정렬 */
+    .start .header {
+      display: flex;
+      justify-content: center;   /* 가로 가운데 */
+      align-items: center;
+      padding-top: 300px;
+    }
+
+    .start .header .title {
+      margin: 0 auto;            /* 남는 공간 균등 */
+      text-align: center;
+      font-size: 4.0em;          /* 필요하면 크기 키우기 */
+      transform: translateX(-11px);
+    }
+
+    /* 테마 버튼은 제목과 겹치지 않게 숨기거나 아래로 내릴 수 있음 */
+    .start .header .toggle {
+      position: absolute;
+      right: 20px;
+    }
+
+    /* ──────────────────────────────────────────
+      플레이(play-only) 화면: 보드만 보이기
+      ────────────────────────────────────────── */
+    .play-only .header,
+    .play-only .controls{
+      display: none !important;   /* 헤더/설정 패널 숨김 */
+    }
+
+    /* 보드 래퍼를 기준으로 스케일/정렬/크기 고정 */
+    .play-only .board-wrap{
+      position: relative;
+      width:  var(--board-w);     /* JS에서 이미 세팅됨 */
+      height: var(--board-h);     /* JS에서 이미 세팅됨 */
+      margin: 0 auto;             /* 가로 중앙 */
+      transform: scale(var(--board-scale, 0.9));
+      transform-origin: center;
+      display: block;             /* 가로 중앙 정렬 안정화 */
+    }
+
+    /* grid 자체는 중앙에 두되, 더 이상 스케일은 주지 않음 */
+    .play-only #grid{
+      margin: 0 auto;
+    }
+
+    /* '다시 뽑기'를 보드의 시각적 우하단에 고정 */
+    .side-actions{
+      display: none;              /* 기본 숨김 */
+    }
+    .play-only .side-actions{
+      display: block;             /* 플레이 화면에서만 보임 */
+      position: absolute;
+      left: calc(100% + 92px);  /* ← 보드의 오른쪽 '바깥'으로 */
+      bottom: 0;                /* 보드 하단에 맞춤 */
+      z-index: 2;
+    }
+
+    /* 필요하면 버튼 크기/간격 보강 */
+    .side-actions .btn {
+      min-width: 180px;   /* 버튼 가로 크기 */
+      height: 85px;       /* 버튼 세로 크기 */
+      font-size: 1.8em;   /* 글자 크기 */
+      padding: 0 20px;    /* 좌우 여백 */
+    }
   </style>
 </head>
 <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
-<body>
+<body class="start">
   <div id="stage">
     <div class="wrap">
       <div class="header">
@@ -110,26 +204,28 @@
         <div class="controls" role="group" aria-label="게임 설정">
           <div class="field">
             <label for="total">뽑기 개수</label>
-            <input id="total" type="number" min="4" max="200" value="28" />
+            <input id="total" type="number" min="4" max="200" value="30" />
           </div>
           <div class="field">
             <label for="wins">당첨 개수</label>
             <input id="wins" type="number" min="1" max="50" value="1" />
           </div>
           <div class="field">
-            <label for="voice">보이스</label>
+            <label for="voice">보이스 선택</label>
             <select id="voice">
               <option value="bright">기쁜다혜</option>
               <option value="deep">우울다혜</option>
             </select>
           </div>
-          <button id="makeBtn" class="btn blue">번호 생성</button>
-          <button id="genBtn" class="btn green">다시 뽑기</button>
+          <button id="makeBtn" class="btn blue">시작</button>
         </div>
-        <div id="grid" class="grid" aria-live="polite"></div>
+        <div class="board-wrap">
+          <div id="grid" class="grid" aria-live="polite"></div>
+          <div class="side-actions" aria-label="보드 작업 버튼">
+            <button id="genBtn" class="btn green">다시 뽑기</button>
+          </div>
+        </div>
       </div>
-    </div>
-  </div>
 
   <script>
     // ★ 추가: 현재 그리드 스펙 보관용
@@ -146,7 +242,7 @@
     }
 
     const BASE_W = 1920, BASE_H = 1080;
-    const SCALE_BIAS = 0.90;
+    const SCALE_BIAS = 0.98;
     const BOARD_IMG_URL = "KakaoTalk_20250918_092306706.jpg";
     const IMAGE_CANDIDATES = [
         BOARD_IMG_URL,
@@ -342,8 +438,9 @@
     function syncButtons(){
       const makeBtn = document.getElementById('makeBtn');
       const genBtn  = document.getElementById('genBtn');
+      const inStart = document.body.classList.contains('start');
       
-      makeBtn.disabled = isSameSpec();
+      makeBtn.disabled = false;
       genBtn.disabled  = !(hasPlayed && isSameSpec());
     }
 
@@ -481,12 +578,25 @@
     }
 
     document.getElementById('makeBtn').addEventListener('click', async ()=>{
-      if (isSameSpec()) return;      // 바꾸지 않았으면 무시
       await newGame();               // 새 이미지 + 새 판 (내부에서 genWinners() 호출)
+      
+      // ── 화면 상태 전환: 설정 → 보드만
+      document.body.classList.remove('start');
+      document.body.classList.add('play-only');
+
+      // 헤더/패널 숨긴 뒤 공간이 늘었으니 재배치/리스케일
+      layout();
+      fit();
     });
-    document.getElementById('genBtn').addEventListener('click', async ()=>{
-      if (!(hasPlayed && isSameSpec())) return;
-      await newGame();
+    document.getElementById('genBtn').addEventListener('click', ()=>{
+      // 설정 화면으로 복귀
+      document.body.classList.remove('play-only');
+      document.body.classList.add('start');
+
+      // (선택) 보드 비우고 싶다면 다음 줄 주석 해제
+      // gridEl.innerHTML = '';
+
+      layout(); fit();
     });
     window.addEventListener('resize', fit);
     if (window.visualViewport) {
@@ -497,7 +607,7 @@
     function setTheme(mode){ if(mode==='light'){ document.body.classList.add('light'); themeBtn.textContent='다크모드'; } else { document.body.classList.remove('light'); themeBtn.textContent='라이트모드'; } localStorage.setItem('pickgame-theme', document.body.classList.contains('light')?'light':'dark'); layout(); fit();}
     themeBtn.addEventListener('click', ()=> setTheme(document.body.classList.contains('light')? 'dark':'light'));
 
-    (async function init(){setTheme(localStorage.getItem('pickgame-theme')||'dark'); voiceEl.value="bright"; voiceProfile="bright"; buildVoicePlayers(); voiceEl.addEventListener('change',()=>{voiceProfile=voiceEl.value}); try{await loadImageMeta(BOARD_IMG_URL);}catch(e){console.warn('이미지 정보를 불러오지 못했습니다:',e);}await newGame();layout();fit();syncButtons();})();
+    (async function init(){setTheme(localStorage.getItem('pickgame-theme')||'dark'); voiceEl.value="bright"; voiceProfile="bright"; buildVoicePlayers(); voiceEl.addEventListener('change',()=>{voiceProfile=voiceEl.value}); try{await loadImageMeta(BOARD_IMG_URL);}catch(e){console.warn('이미지 정보를 불러오지 못했습니다:',e);}layout();fit();syncButtons();})();
     
     function primeVoices(){
       const p = voiceProfile;
